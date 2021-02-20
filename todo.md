@@ -14,7 +14,7 @@
 
 ## Live  translation
 
-- [ ] Figure out the right architecutre for this... Considering english transcription sent to client, client pick language on their end, and the web browser makes translation requests to the server.  Alt, Transcribe and then translate in line to N configured languages the teacher picks when starting the stream.  
+- [ ] Figure out the right architecture for this... Considering english transcription sent to client, client pick language on their end, and the web browser makes translation requests to the server.  Alt, Transcribe and then translate in line to N configured languages the teacher picks when starting the stream.  
 - [ ] Create live audio stream to server + transcribe to log as first pass
 - [ ] Option to save audio and transcript if you want. 
 - [ ] Break transcription into sentences, phrases etc and stream to clients
@@ -23,7 +23,11 @@
 ## Cleanup and prep for launch (technical)
 
 - [ ] Remove api keys, Configure rate limit on all actions from env variables
-- [ ] Linkify live stream so 1 server can serve many streams
+- [ ] Linkify live stream so 1 server can serve many streams (If hardware even permits)
+- [ ] Clarify API documentation
+- [ ] Add test coverage
+- [ ] Move transcribing and translation to background threads
+- [ ] put FFMPEG into the docker image
 
 ## Videos
 
@@ -31,7 +35,7 @@
 - [ ] How to transcribe and translate videos
 - [ ] How to setup your libretranslate for success
 
-## Streach deliverables
+## Stretch deliverables
 
 - Document translation
 

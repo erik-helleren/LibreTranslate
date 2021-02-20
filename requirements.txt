@@ -6,3 +6,4 @@ Flask-Limiter==1.4
 waitress==1.4.4
 langdetect==1.0.8
 expiringdict==1.2.1
+ffmpeg-python==0.2.0

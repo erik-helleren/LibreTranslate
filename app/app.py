@@ -10,6 +10,8 @@ from pathlib import Path
 import json
 import uuid
 import shutil
+import ffmpeg
+from datetime import datetime, timedelta
 
 DetectorFactory.seed = 0  # deterministic
 
@@ -135,6 +137,12 @@ def create_app(args):
         delete_project(id)
         return redirect("/projects")
 
+    @app.route("/project/<id>/transcription")
+    @limiter.exempt
+    def projectTranscribe(id):
+        transcribe(id)
+        return redirect("/projects/"+id)
+
     @app.route("/create-project")
     @limiter.exempt
     def createProject():
@@ -161,19 +169,50 @@ def create_app(args):
                 project_id = str(uuid.uuid4())
                 if not os.path.exists(os.path.join(project_directory, project_id)):
                     os.makedirs(os.path.join(project_directory, project_id))
-                file.save(os.path.join(project_directory, project_id,
-                                       "rawMedia."+file.filename.rsplit('.', 1)[1].lower()))
-                metadata = {"name": request.form['name']}
+                fileending = file.filename.rsplit('.', 1)[1].lower()
+                file.save(os.path.join(project_directory,
+                                       project_id, "rawMedia."+fileending))
+                # TODO store original file name
+                metadata = createMetadata(
+                    project_id, request.form['name'], fileending)
                 with open(os.path.join(project_directory, project_id, "metadata.json"), 'w') as f:
                     json.dump(metadata, f)
 
                 return redirect("./project/"+project_id)
         return
 
+    def createMetadata(project_id, name, ending):
+        metadata = {"name": name}
+        in_filename = os.path.join(
+            project_directory, project_id, "rawMedia."+ending)
+        probe = ffmpeg.probe(in_filename)
+        video_stream = next(
+            (stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
+        print(video_stream)
+        print(str(video_stream))
+        metadata['width'] = int(video_stream['width'])
+        metadata['height'] = int(video_stream['height'])
+        parsedDuration = datetime.strptime(
+            video_stream['tags']['DURATION'].rsplit(".", 1)[0], "%H:%M:%S")
+        metadata['durationSeconds'] = timedelta(
+            hours=parsedDuration.hour, minutes=parsedDuration.minute, seconds=parsedDuration.second).total_seconds()
+        (
+            ffmpeg
+            .input(in_filename, ss=3)
+            .filter('scale', 512, -1)
+            .output(os.path.join(project_directory, project_id, "thumbnail.png"), vframes=1)
+            .run()
+        )
+
+        return metadata
+
+    def transcribe(id):
+        project_path = os.path.join(project_directory, project_id)
+
     def delete_project(id):
         print("Deleting a project with ID: "+id)
         # TODO make sure tha ID is a valid ID an not just some bad path
-        shutil.rmtree(os.path.join(project_directory,id))
+        shutil.rmtree(os.path.join(project_directory, id))
 
     @app.route("/languages", methods=['GET', 'POST'])
     @limiter.exempt

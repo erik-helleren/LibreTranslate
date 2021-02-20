@@ -145,8 +145,17 @@
 					<h1>Invalid project ID specified</h1>
 					{% else %}
 					<h1>{{project['name']}}</h1>
-					<p>Project ID: {{project['id']}}</h1>
-					<p>More details coming soon</p>
+					<p>Project ID: {{project['id']}}</p>
+					
+					<table>
+						{% for key, value in project.items() %}
+						<tr>
+							<td>{{key}}</td>
+							<td>{{value}}</td>
+						</tr>
+						{% endfor %}
+					</table>
+
 					<!-- TODO add metadata and available files to download-->
 					<!-- TODO add transcribe button and translate button -->
 
