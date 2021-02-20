@@ -141,123 +141,21 @@
 		<div v-else>
 			<div class="section no-pad-bot">
 				<div class="container">
-					<div class="row">
-						<h3 class="header center">Translation API</h3>
-						<div class="card horizontal">
-							<div class="card-stacked">
-								<div class="card-content">
-									<form class="col s12">
-										<div class="row">
-											<div class="input-field col s5">
-												<select class="browser-default" v-model="sourceLang"
-													ref="sourceLangDropdown" @change="handleInput">
-													<template v-for="option in langs">
-														<option :value="option.code">[[ option.name ]]</option>
-													</template>
-												</select>
-											</div>
-											<div class="col s2 center">
-												<a href="javascript:void(0)" @click="swapLangs"
-													class="waves-effect waves-teal btn-flat btn-large"
-													style="margin-top: 8px;"><i
-														class="material-icons">swap_horiz</i></a>
-											</div>
-											<div class="input-field col s5">
-												<select class="browser-default" v-model="targetLang"
-													ref="targetLangDropdown" @change="handleInput">
-													<template v-for="option in langs">
-														<option v-if="option.code !== 'auto'" :value="option.code">[[
-															option.name ]]</option>
-													</template>
-												</select>
-											</div>
-										</div>
-										<div class="row">
-											<div class="input-field col s6">
-												<textarea id="textarea1" class="materialize-textarea"
-													v-model="inputText" @input="handleInput"
-													ref="inputTextarea"></textarea>
-												<label for="textarea1">Input Text</label>
-												<div v-if="charactersLimit !== -1">
-													<label>[[ inputText.length ]] / [[ charactersLimit ]]</label>
-												</div>
-											</div>
-											<div class="input-field col s6">
-												<div>
-													<textarea id="textarea2" class="materialize-textarea"
-														v-model="translatedText" ref="translatedTextarea"></textarea>
-													<label for="textarea2">
-														<div class="progress translate" v-if="loadingTranslation">
-															<div class="indeterminate"></div>
-														</div>
-													</label>
-												</div>
-											</div>
-										</div>
-										<div class="row">
-											<div class="col s6">
-												<button class="btn btn-small" style="display: inline-block;"
-													title="Delete text" @click="deleteText"><i
-														class="material-icons">delete</i></button>
-											</div>
-											<div class="col s6" style="text-align: right;">
-												<button class="btn btn-small" style="display: inline-block;"
-													@click="copyText">[[ copyTextLabel ]]</button>
-											</div>
-										</div>
-									</form>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
+					{% if project is none%}
+					<h1>Invalid project ID specified</h1>
+					{% else %}
+					<h1>{{project['name']}}</h1>
+					<p>Project ID: {{project['id']}}</h1>
+					<p>More details coming soon</p>
+					<!-- TODO add metadata and available files to download-->
+					<!-- TODO add transcribe button and translate button -->
 
-			<div class="section no-pad-bot" id="index-banner">
-				<div class="container">
-					<div class="row center">
-						<div class="col s12 m12">
-							<div class="card horizontal">
-								<div class="card-stacked">
-									<div class="card-content">
-										<div class="row center">
-											<div class="col s12 m12 l6 left-align">
-												<p>Request</p>
-												<p>
-												<pre class="code"><code class="language-javascript" v-html="$options.filters.highlight(requestCode)">
-</code></pre>
-												</p>
-											</div>
-											<div class="col s12 m12 l6 left-align">
-												<p>Response</p>
-												<pre class="code"><code class="language-javascript" v-html="$options.filters.highlight(output)">
-</code></pre>
-											</div>
-										</div>
-
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
+					<form action="./{{project['id']}}/delete" method=delete enctype=multipart/form-data>
+						<input type="submit" value="Delete">
+					</form>
+					{% endif %}
 				</div>
 			</div>
-			{% if web_version %}
-			<div class="section no-pad-bot" id="index-banner">
-				<div class="container">
-					<div class="row center">
-						<div class="col s12 m12">
-							<h3 class="header">Open Source Machine Translation</h3>
-							<h4 class="header">100% Self-Hosted. No Limits. No Ties to Proprietary Services.</h4>
-							<br /><a class="waves-effect waves-light btn btn-large"
-								href="https://github.com/uav4geo/LibreTranslate"><i
-									class="material-icons left">cloud_download</i> Download</a>
-							<br /><br /><br />
-						</div>
-					</div>
-				</div>
-			</div>
-			{% endif %}
 		</div>
 	</div>
 
@@ -530,15 +428,6 @@
 	});
 
 });
-
-		function setApiKey() {
-			var prevKey = localStorage.getItem("api_key") || "";
-			var newKey = "";
-			newKey = window.prompt("Type in your API Key. If you need an API key, contact the server operator.", prevKey);
-			if (newKey === null) newKey = "";
-
-			localStorage.setItem("api_key", newKey);
-		}
 
 	</script>
 </body>

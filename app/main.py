@@ -29,6 +29,8 @@ def main():
                         help="Use offline")
     parser.add_argument('--api-keys', default=False, action="store_true",
                         help="Enable API keys database for per-user rate limits lookup")
+    parser.add_argument('--project-directory', type=str, default="/tmp/LibreTranslateProjects", metavar="<directory>",
+                        help="Project directory for storing recorded audio and video files and metadata")
     
 
     args = parser.parse_args()
