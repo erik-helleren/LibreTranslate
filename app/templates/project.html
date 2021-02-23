@@ -155,7 +155,17 @@
 						</tr>
 						{% endfor %}
 					</table>
-
+					<p>Downloads</p>
+					<table>
+						<tr>
+							<td><a href="./{{project['id']}}/download-all">{{value}}</a></td>
+						</tr>
+						{% for value in project['subtitles'] %}
+						<tr>
+							<td><a href="./{{project['id']}}/download/{{value}}">{{value}}</a></td>
+						</tr>
+						{% endfor %}
+					</table>
 					<form action="./{{project['id']}}/transcription" enctype=multipart/form-data>
 						<input type="submit" value="Create English Transcription">
 					</form>

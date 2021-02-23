@@ -18,6 +18,9 @@ import wave
 import numpy as np
 import logging
 import srt
+import glob
+import re
+import zipfile
 
 DetectorFactory.seed = 0  # deterministic
 
@@ -136,7 +139,8 @@ def create_app(args):
     desired_sample_rate = ds.sampleRate()
     logging.info('Model optimized for a sample rate of ' +
                  str(desired_sample_rate))
-
+    uuid4hex = re.compile('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\Z', re.I)
+        
     @app.errorhandler(400)
     def invalid_api(e):
         return jsonify({"error": str(e.description)}), 400
@@ -162,6 +166,9 @@ def create_app(args):
     @app.route("/project/<id>")
     @limiter.exempt
     def project(id):
+        if not uuid4hex.match(id):
+            logging.error("Invalid project id")
+            return redirect("/projects")
         return render_template('project.html', gaId=args.ga_id, frontendTimeout=args.frontend_timeout, offline=args.offline, api_keys=args.api_keys, project=loadProjectDetails(id), web_version=os.environ.get('LT_WEB') is not None)
 
     @app.route("/project/<id>/delete")
@@ -173,9 +180,22 @@ def create_app(args):
     @app.route("/project/<id>/transcription")
     @limiter.exempt
     def projectTranscribe(id):
+        if not uuid4hex.match(id):
+            flash("Invalid project id")
+            return redirect("/projects")
         create_wav_file_if_needed(id)
         transcribe(id)
         return redirect("/project/"+id)
+
+    @app.route("/project/<id>/download/<file>")
+    def download(id,file):
+    ## todo validate the file part
+
+        metadata=loadProjectDetails(id)
+        if metadata is None:
+            logging.info("Unable to find metdata for project ID: "+id)
+            return redirect("/projects")
+        return send_from_directory(directory=metadata['project_dir'], filename=file, as_attachment=True)
 
     @app.route("/create-project")
     @limiter.exempt
@@ -190,13 +210,11 @@ def create_app(args):
         if request.method == 'POST':
             # check if the post request has the file part
             if 'file' not in request.files:
-                flash('No file part')
                 return redirect(request.url)
             file = request.files['file']
             # if user does not select file, browser also
             # submit an empty part without filename
             if file.filename == '':
-                flash('No selected file')
                 return redirect(request.url)
             if file and allowed_file(file.filename):
                 project_id = str(uuid.uuid4())
@@ -270,6 +288,14 @@ def create_app(args):
         srt_content = create_srt_file(srt_chunks, project_id)
         logging.debug("SRT content: "+srt_content)
         translate_subtitles_to_all_languages(srt_content, project_id)
+        zip_all_subtitles(project_id)
+
+    @timeit
+    def zip_all_subtitles(project_id):
+        metadata=loadProjectDetails(project_id)
+        zipf = zipfile.ZipFile(os.path.join(metadata['project_dir'], 'subtitles.zip'),'w', zipfile.ZIP_DEFLATED)
+        for subtitle in metadata['subtitles']:
+            zipf.write(os.path.join(metadata['project_dir'],subtitle))
 
     @timeit
     def translate_subtitles_to_all_languages(srt_content, project_id):
@@ -449,9 +475,18 @@ def create_app(args):
             project_directory, project_id, "metadata.json")
         if not os.path.exists(metadata_path):
             return None
-        # TODO enrich stored metadata with extra info like avaliable subtitle files, video location, etc.
         metadata = json.loads(Path(metadata_path).read_text())
         metadata["id"] = project_id
+        metadata['project_dir'] = os.path.join(project_directory, project_id)
+        # TODO rely on this data for everything
+        metadata['subtitles'] = []
+        for file in os.listdir(metadata['project_dir']):
+            if file.endswith(".srt"):
+                metadata['subtitles'].append(file)
+        metadata['subtitles'].append('subtitles.zip')
+        metadata['inputVideo'] = "rawMedia."+metadata['fileEnding']
+
+        metadata['audio'] = "audio.wav"
         return metadata
 
     @app.route("/translate", methods=['POST'])
