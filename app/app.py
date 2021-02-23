@@ -21,13 +21,12 @@ import srt
 import glob
 import re
 import zipfile
+import subprocess
+import sys
 
 DetectorFactory.seed = 0  # deterministic
 
 ALLOWED_EXTENSIONS = {'mp4', 'mkv', 'mp3'}
-SUBTITLE_BREAK_GAP_SECONDS = 0.5
-SUBTITLE_MAX_CHARS = 47
-SUBTITLE_MAX_DURATION_SECONDS = 7
 
 api_keys_db = None
 
@@ -139,8 +138,9 @@ def create_app(args):
     desired_sample_rate = ds.sampleRate()
     logging.info('Model optimized for a sample rate of ' +
                  str(desired_sample_rate))
-    uuid4hex = re.compile('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\Z', re.I)
-        
+    uuid4hex = re.compile(
+        '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\Z', re.I)
+
     @app.errorhandler(400)
     def invalid_api(e):
         return jsonify({"error": str(e.description)}), 400
@@ -183,15 +183,17 @@ def create_app(args):
         if not uuid4hex.match(id):
             flash("Invalid project id")
             return redirect("/projects")
-        create_wav_file_if_needed(id)
-        transcribe(id)
+
+        subprocess.Popen([sys.executable, '/home/eh/LibreTranslate/scripts/batch.py'], cwd=os.path.join(project_directory, id),
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT)
         return redirect("/project/"+id)
 
     @app.route("/project/<id>/download/<file>")
-    def download(id,file):
-    ## todo validate the file part
+    def download(id, file):
+        # todo validate the file part
 
-        metadata=loadProjectDetails(id)
+        metadata = loadProjectDetails(id)
         if metadata is None:
             logging.info("Unable to find metdata for project ID: "+id)
             return redirect("/projects")
@@ -252,153 +254,6 @@ def create_app(args):
             .run()
         )
         return metadata
-
-    @timeit
-    def create_wav_file_if_needed(project_id):
-        metadata = loadProjectDetails(project_id)
-        in_filename = os.path.join(
-            project_directory, project_id, "rawMedia." + metadata['fileEnding'])
-        project_path = os.path.join(project_directory, project_id)
-        if not os.path.exists(os.path.join(project_path, "audio.wav")):
-            create_wav_file(in_filename, os.path.join(
-                project_directory, project_id, "audio.wav"))
-
-    @timeit
-    def create_wav_file(in_filename, out_path):
-        os.system("ffmpeg -i "+in_filename+" -ac 1 -ar 16000 "+out_path)
-
-    @timeit
-    def transcribe(project_id):
-        project_path = os.path.join(project_directory, project_id)
-        logging.debug("Loading wav file for project "+project_id)
-        fin = wave.open(os.path.join(project_path, "audio.wav"), 'rb')
-        fs_orig = fin.getframerate()
-        if fs_orig != desired_sample_rate:
-            logging.error('Original sample rate ({}) is different than {}hz. Resampling might produce erratic speech recognition.'.format(
-                fs_orig, desired_sample_rate))
-        audio = np.frombuffer(fin.readframes(fin.getnframes()), np.int16)
-        audio_length = fin.getnframes() * (1/fs_orig)
-        fin.close()
-        metadata = performSpeechToText(audio)
-        logging.debug(str(metadata))
-        words = words_from_candidate_transcript(metadata.transcripts[0])
-        logging.debug(str(words))
-        srt_chunks = build_srt_chunks(words)
-        logging.debug(str(srt_chunks))
-        srt_content = create_srt_file(srt_chunks, project_id)
-        logging.debug("SRT content: "+srt_content)
-        translate_subtitles_to_all_languages(srt_content, project_id)
-        zip_all_subtitles(project_id)
-
-    @timeit
-    def zip_all_subtitles(project_id):
-        metadata=loadProjectDetails(project_id)
-        zipf = zipfile.ZipFile(os.path.join(metadata['project_dir'], 'subtitles.zip'),'w', zipfile.ZIP_DEFLATED)
-        for subtitle in metadata['subtitles']:
-            zipf.write(os.path.join(metadata['project_dir'],subtitle))
-
-    @timeit
-    def translate_subtitles_to_all_languages(srt_content, project_id):
-        src_lang = next(
-            iter([l for l in languages if l.code == "en"]), None)
-        for tgt_lang in languages:
-            if(tgt_lang.code == src_lang.code):
-                continue
-            translate_subtitles_to_one_language(
-                src_lang, tgt_lang, srt_content, project_id)
-
-    @timeit
-    def translate_subtitles_to_one_language(src_lang, tgt_lang, srt_content, project_id):
-        translator = src_lang.get_translation(tgt_lang)
-        translated_content = translator.translate(srt_content)
-        write_srt_file(translated_content, project_id, tgt_lang.code)
-
-    @timeit
-    def performSpeechToText(audio):
-        return ds.sttWithMetadata(audio)
-
-    @timeit
-    def words_from_candidate_transcript(metadata):
-        word = ""
-        word_list = []
-        word_start_time = 0
-        word_duration = 0
-        # Loop through each character
-        for i, token in enumerate(metadata.tokens):
-            # Append character to word if it's not a space
-            if token.text != " ":
-                if len(word) == 0:
-                    # Log the start time of the new word
-                    word_start_time = token.start_time
-
-                word = word + token.text
-                word_duration = token.start_time - word_start_time
-
-            # Word boundary is either a space or the last character in the array
-            if token.text == " " or i == len(metadata.tokens) - 1:
-
-                if word_duration < 0:
-                    word_duration = 0
-
-                each_word = dict()
-                each_word["text"] = word
-                each_word["start_time"] = round(word_start_time, 4)
-                each_word["duration"] = round(word_duration, 4)
-
-                word_list.append(each_word)
-                # Reset
-                word = ""
-                word_start_time = 0
-
-        return word_list
-
-    @timeit
-    def build_srt_chunks(word_list):
-        srt_chunks = []
-        srt_chunks.append(
-            {"start_time": word_list[0]['start_time'], "end_time": word_list[0]['start_time']+word_list[0]['duration'], "text": ""})
-        for word in word_list:
-            if word is None:
-                continue
-            last_chunk = srt_chunks[-1]
-            too_long_characters = len(
-                last_chunk['text'])+len(word['text'])+1 > SUBTITLE_MAX_CHARS
-            paused = word['start_time'] - \
-                last_chunk['end_time'] > SUBTITLE_BREAK_GAP_SECONDS
-            too_long_duration = word['start_time']+word['duration'] - \
-                last_chunk['start_time'] > SUBTITLE_MAX_DURATION_SECONDS
-            if too_long_characters or paused or too_long_duration:
-                srt_chunks.append(
-                    {"start_time": word['start_time'], "end_time": word['start_time']+word['duration'], "text": word['text']})
-            else:
-                last_chunk['text'] = last_chunk['text']+" "+word['text']
-                last_chunk['end_time'] = word['start_time']+word['duration']
-        return srt_chunks
-
-    @timeit
-    def create_srt_file(srt_chunks, project_id):
-        subtitles = []
-        for i, chunk in enumerate(srt_chunks):
-            end_time = chunk['end_time']
-            if i != len(srt_chunks) - 1:
-                end_time = srt_chunks[i+1]['start_time']
-            subtitles.append(srt.Subtitle(
-                i+1, timedelta(seconds=chunk['start_time']), timedelta(seconds=end_time), chunk['text'].strip()))
-        srt_content = srt.compose(subtitles)
-        write_srt_file(srt_content, project_id, "en")
-        return srt_content
-
-    @timeit
-    def write_srt_file(content, project_id, lang_code):
-      with open(os.path.join(project_directory, project_id, lang_code+".srt"), 'w') as f:
-          f.write(content)
-
-    def create_timestamp(time):
-        hours, remainder = divmod(s, 3600)
-        minutes, remainder = divmod(remainder, 60)
-        seconds, ms = divmod(remainder, 1)
-        ms = ms*1000
-        return '{:02}:{:02}:{:02}.{:03}'.format(int(hours), int(minutes), int(seconds), int(ms))
 
     def delete_project(project_id):
         logging.info("Deleting a project with ID: "+project_id)
@@ -483,7 +338,8 @@ def create_app(args):
         for file in os.listdir(metadata['project_dir']):
             if file.endswith(".srt"):
                 metadata['subtitles'].append(file)
-        metadata['subtitles'].append('subtitles.zip')
+        if os.path.exists(os.path.join(project_directory,"subtitles.zip")):
+            metadata['subtitles'].insert(0, 'subtitles.zip')
         metadata['inputVideo'] = "rawMedia."+metadata['fileEnding']
 
         metadata['audio'] = "audio.wav"
