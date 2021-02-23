@@ -156,10 +156,15 @@
 						{% endfor %}
 					</table>
 
+					<form action="./{{project['id']}}/transcription" enctype=multipart/form-data>
+						<input type="submit" value="Create English Transcription">
+					</form>
+					<a href="./{{project['id']}}/transcription">Create English Transcription</a>
+
 					<!-- TODO add metadata and available files to download-->
 					<!-- TODO add transcribe button and translate button -->
 
-					<form action="./{{project['id']}}/delete" method=delete enctype=multipart/form-data>
+					<form action="./{{project['id']}}/delete" enctype=multipart/form-data>
 						<input type="submit" value="Delete">
 					</form>
 					{% endif %}

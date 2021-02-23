@@ -20,6 +20,10 @@
 - [ ] Break transcription into sentences, phrases etc and stream to clients
 - [ ] Video: How to setup your classroom
 
+## Improvements 
+- [ ] Use a better punctuator and training data set.  
+
+
 ## Cleanup and prep for launch (technical)
 
 - [ ] Remove api keys, Configure rate limit on all actions from env variables
