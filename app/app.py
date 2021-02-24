@@ -24,6 +24,7 @@ import zipfile
 import subprocess
 import sys
 
+home_dir=os.getcwd()
 DetectorFactory.seed = 0  # deterministic
 
 ALLOWED_EXTENSIONS = {'mp4', 'mkv', 'mp3'}
@@ -130,9 +131,8 @@ def create_app(args):
                 args.req_limit, Database() if args.api_keys else None)
         )
     model_load_start = timer()
-    ds = Model("/home/eh/LibreTranslate/models/deepspeech-0.9.3-models.tflite")
-    ds.enableExternalScorer(
-        "/home/eh/LibreTranslate/models/deepspeech-0.9.3-models.scorer")
+    ds = Model(os.path.join(home_dir,"models","deepspeech-0.9.3-models.tflite"))
+    ds.enableExternalScorer(os.path.join(home_dir,"models","deepspeech-0.9.3-models.scorer"))
     model_load_end = timer() - model_load_start
     logging.info('Loaded model in {:.3}s.'.format(model_load_end))
     desired_sample_rate = ds.sampleRate()
@@ -184,7 +184,7 @@ def create_app(args):
             flash("Invalid project id")
             return redirect("/projects")
 
-        subprocess.Popen([sys.executable, '/home/eh/LibreTranslate/scripts/batch.py'], cwd=os.path.join(project_directory, id),
+        subprocess.Popen([sys.executable, os.path.join(home_dir,'scripts', 'batch.py'], cwd=os.path.join(project_directory, id),
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
         return redirect("/project/"+id)
