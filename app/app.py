@@ -184,7 +184,7 @@ def create_app(args):
             flash("Invalid project id")
             return redirect("/projects")
 
-        subprocess.Popen([sys.executable, os.path.join(home_dir,'scripts', 'batch.py'], cwd=os.path.join(project_directory, id),
+        subprocess.Popen([sys.executable, os.path.join(home_dir,'scripts', 'batch.py')], cwd=os.path.join(project_directory, id),
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
         return redirect("/project/"+id)
