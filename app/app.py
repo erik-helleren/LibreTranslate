@@ -82,6 +82,8 @@ def get_routes_limits(default_req_limit, api_keys_db):
 
 def create_app(args):
     logging.basicConfig(level=logging.DEBUG)
+    sys.stdout = LoggerWriter(log.debug)
+    sys.stderr = LoggerWriter(log.warning)
     if not args.offline:
         from app.init import boot
         boot()
@@ -232,7 +234,7 @@ def create_app(args):
                     json.dump(metadata, f)
 
                 return redirect("./project/"+project_id)
-        return
+        
 
     @timeit
     def createMetadata(project_id, name, ending):

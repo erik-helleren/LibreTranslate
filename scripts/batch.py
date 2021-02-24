@@ -26,7 +26,6 @@ SUBTITLE_BREAK_GAP_SECONDS = 0.5
 SUBTITLE_MAX_CHARS = 47
 SUBTITLE_MAX_DURATION_SECONDS = 7
 
-logging.basicConfig(filename="job.log", level=logging.DEBUG)
 
 def timeit(method):
     def timed(*args, **kw):
@@ -44,11 +43,15 @@ def timeit(method):
 def main():
     parser = argparse.ArgumentParser(description='LibreTranslate - Free and Open Source Translation API')
     parser.add_argument('--target-dir', type=str,
-                        help='Directory of the project to translate (%(default)s)', required=true)
+                        help='Directory of the project to translate (%(default)s)', required=True)
     args = parser.parse_args()
     global target_dir
     target_dir=args.target_dir
     os.chdir(target_dir)
+    logging.basicConfig(filename="batch.log", level=logging.DEBUG)
+    sys.stdout = LoggerWriter(log.debug)
+    sys.stderr = LoggerWriter(log.warning)
+
     ## create lock file
     load()
     create_wav_file_if_needed()
@@ -71,6 +74,7 @@ def load_transcribe_model():
     ds.enableExternalScorer(os.path.join(home_dir,"models","deepspeech-0.9.3-models.scorer"))
     model_load_end = timer() - model_load_start
     logging.info('Loaded model in {:.3}s.'.format(model_load_end))
+    global desired_sample_rate
     desired_sample_rate = ds.sampleRate()
     logging.info('Model optimized for a sample rate of ' +
                  str(desired_sample_rate))
