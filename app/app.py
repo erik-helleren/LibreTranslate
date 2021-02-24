@@ -31,6 +31,24 @@ ALLOWED_EXTENSIONS = {'mp4', 'mkv', 'mp3'}
 
 api_keys_db = None
 
+class LoggerWriter:
+    def __init__(self, level):
+        # self.level is really like using log.debug(message)
+        # at least in my case
+        self.level = level
+
+    def write(self, message):
+        # if statement reduces the amount of newlines that are
+        # printed to the logger
+        if message != '\n':
+            self.level(message)
+
+    def flush(self):
+        # create a flush method so things can be flushed when
+        # the system wants to. Not sure if simply 'printing'
+        # sys.stderr is the correct way to do it, but it seemed
+        # to work properly for me.
+        self.level(sys.stderr)
 
 def timeit(method):
     def timed(*args, **kw):
@@ -82,8 +100,8 @@ def get_routes_limits(default_req_limit, api_keys_db):
 
 def create_app(args):
     logging.basicConfig(level=logging.DEBUG)
-    sys.stdout = LoggerWriter(log.debug)
-    sys.stderr = LoggerWriter(log.warning)
+    sys.stdout = LoggerWriter(logging.debug)
+    sys.stderr = LoggerWriter(logging.warning)
     if not args.offline:
         from app.init import boot
         boot()
@@ -186,7 +204,8 @@ def create_app(args):
             flash("Invalid project id")
             return redirect("/projects")
         logging.info("Starting the transcription job for project ID "+id)
-        subprocess.Popen([sys.executable, os.path.join(home_dir,'scripts', 'batch.py', "--target-dir", os.path.join(project_directory, id))],
+        cmd = [sys.executable, os.path.join(home_dir,'scripts', 'batch.py', "--target-dir", os.path.join(project_directory, id))]
+        subprocess.Popen(cmd,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
         return redirect("/project/"+id)
