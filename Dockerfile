@@ -1,8 +1,7 @@
-FROM  jrottenberg/ffmpeg:4.3-alpine AS ffmpeg
-
-
 FROM python:3.8
-COPY --from=ffmpeg /usr/local /usr/local/
+RUN apt-get update
+RUN apt-get install -y ffmpeg
+
 WORKDIR /app
 
 RUN pip install --upgrade pip

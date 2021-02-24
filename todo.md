@@ -10,10 +10,12 @@
 - [X] Parse video when creating a new project to: Extract image, detect duration
 - [X] Write transcribe API to: 1. Strip audio out of video file. 2. Create a subtitle file from audio file. 3. Add subtitle to project
 - [X] Download SRT files, including a zip of all of the files
-- [ ] Move transcription to an async job/python task/external script.  (Processing time >> Startup time for batch jobs)  
+- [X] Move transcription to an async job/python task/external script.  (Processing time >> Startup time for batch jobs)  
 - [ ] Lock requests for translation from coming in while its in progress.  Trigger automatically on upload
+- [ ] Fully dockerize the new models
 - [ ] Note that transcription in progress on project page
-- [ ] Improve visuals on project page and projects list page
+- [ ] Improve visuals on project page and projects list page.  
+- [ ] Move downloading models into the docker startup rather than doing it as part of the image
 
 
 ### Optional

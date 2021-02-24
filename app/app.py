@@ -131,7 +131,7 @@ def create_app(args):
                 args.req_limit, Database() if args.api_keys else None)
         )
     model_load_start = timer()
-    ds = Model(os.path.join(home_dir,"models","deepspeech-0.9.3-models.tflite"))
+    ds = Model(os.path.join(home_dir,"models","deepspeech-0.9.3-models.pbmm"))
     ds.enableExternalScorer(os.path.join(home_dir,"models","deepspeech-0.9.3-models.scorer"))
     model_load_end = timer() - model_load_start
     logging.info('Loaded model in {:.3}s.'.format(model_load_end))
@@ -183,8 +183,8 @@ def create_app(args):
         if not uuid4hex.match(id):
             flash("Invalid project id")
             return redirect("/projects")
-
-        subprocess.Popen([sys.executable, os.path.join(home_dir,'scripts', 'batch.py')], cwd=os.path.join(project_directory, id),
+        logging.info("Starting the transcription job for project ID "+id)
+        subprocess.Popen([sys.executable, os.path.join(home_dir,'scripts', 'batch.py', "--target-dir", os.path.join(project_directory, id))],
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
         return redirect("/project/"+id)

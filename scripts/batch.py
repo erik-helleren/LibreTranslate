@@ -20,6 +20,7 @@ import re
 import zipfile
 from app.language import languages
 
+home_dir=os.getcwd()
 
 SUBTITLE_BREAK_GAP_SECONDS = 0.5
 SUBTITLE_MAX_CHARS = 47
@@ -41,6 +42,13 @@ def timeit(method):
     return timed
 
 def main():
+    parser = argparse.ArgumentParser(description='LibreTranslate - Free and Open Source Translation API')
+    parser.add_argument('--target-dir', type=str,
+                        help='Directory of the project to translate (%(default)s)', required=true)
+    args = parser.parse_args()
+    global target_dir
+    target_dir=args.target_dir
+    os.chdir(target_dir)
     ## create lock file
     load()
     create_wav_file_if_needed()
@@ -59,15 +67,14 @@ def load():
 def load_transcribe_model():
     model_load_start = timer()
     global ds
-    ds = Model("/home/eh/LibreTranslate/models/deepspeech-0.9.3-models.tflite")
-    ds.enableExternalScorer(
-        "/home/eh/LibreTranslate/models/deepspeech-0.9.3-models.scorer")
+    ds = Model(os.path.join(home_dir,"models","deepspeech-0.9.3-models.pbmm"))
+    ds.enableExternalScorer(os.path.join(home_dir,"models","deepspeech-0.9.3-models.scorer"))
     model_load_end = timer() - model_load_start
     logging.info('Loaded model in {:.3}s.'.format(model_load_end))
-    global desired_sample_rate
     desired_sample_rate = ds.sampleRate()
     logging.info('Model optimized for a sample rate of ' +
                  str(desired_sample_rate))
+    
 
 @timeit
 def create_wav_file_if_needed():
